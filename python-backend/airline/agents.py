@@ -26,8 +26,7 @@ MODEL = "gpt-5.2"
 
 
 def seat_services_instructions(
-    run_context: RunContextWrapper[AirlineAgentChatContext], 
-    agent: Agent[AirlineAgentChatContext]
+    run_context: RunContextWrapper[AirlineAgentChatContext], agent: Agent[AirlineAgentChatContext]
 ) -> str:
     ctx = run_context.context.state
     confirmation = ctx.confirmation_number or "[unknown]"
@@ -58,8 +57,7 @@ seat_special_services_agent = Agent[AirlineAgentChatContext](
 
 
 def flight_information_instructions(
-    run_context: RunContextWrapper[AirlineAgentChatContext], 
-    agent: Agent[AirlineAgentChatContext]
+    run_context: RunContextWrapper[AirlineAgentChatContext], agent: Agent[AirlineAgentChatContext]
 ) -> str:
     ctx = run_context.context.state
     confirmation = ctx.confirmation_number or "[unknown]"
@@ -87,8 +85,7 @@ flight_information_agent = Agent[AirlineAgentChatContext](
 
 
 def booking_cancellation_instructions(
-    run_context: RunContextWrapper[AirlineAgentChatContext], 
-    agent: Agent[AirlineAgentChatContext]
+    run_context: RunContextWrapper[AirlineAgentChatContext], agent: Agent[AirlineAgentChatContext]
 ) -> str:
     ctx = run_context.context.state
     confirmation = ctx.confirmation_number or "[unknown]"
@@ -117,8 +114,7 @@ booking_cancellation_agent = Agent[AirlineAgentChatContext](
 
 
 def refunds_compensation_instructions(
-    run_context: RunContextWrapper[AirlineAgentChatContext], 
-    agent: Agent[AirlineAgentChatContext]
+    run_context: RunContextWrapper[AirlineAgentChatContext], agent: Agent[AirlineAgentChatContext]
 ) -> str:
     ctx = run_context.context.state
     confirmation = ctx.confirmation_number or "[unknown]"
