@@ -1,16 +1,12 @@
 # Customer Service Agents Demo
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-![NextJS](https://img.shields.io/badge/Built_with-NextJS-blue)
+![FastAPI](https://img.shields.io/badge/Built_with-FastAPI-009688)
 ![OpenAI API](https://img.shields.io/badge/Powered_by-OpenAI_API-orange)
 
 This repository contains a demo of a Customer Service interface built on top of the [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/).
 
-It is composed of two parts:
-
-1. A python backend that handles the agent orchestration logic, implementing the Agents SDK [customer service example](https://github.com/openai/openai-agents-python/tree/main/examples/customer_service)
-
-2. A Next.js UI allowing the visualization of the agent orchestration process and providing a chat interface. It uses [ChatKit](https://openai.github.io/chatkit-js/) to provide a high-quality chat interface.
+It is composed of a single FastAPI app that handles the agent orchestration logic and serves a static vanilla JavaScript UI. The orchestration is based on the Agents SDK [customer service example](https://github.com/openai/openai-agents-python/tree/main/examples/customer_service), and the chat experience uses [ChatKit](https://openai.github.io/chatkit-js/).
 
 ![Demo Screenshot](screenshot.jpg)
 
@@ -26,7 +22,7 @@ export OPENAI_API_KEY=your_api_key
 
 You can also follow [these instructions](https://platform.openai.com/docs/libraries#create-and-export-an-api-key) to set your OpenAI key at a global level.
 
-Alternatively, you can set the `OPENAI_API_KEY` environment variable in an `.env` file at the root of the `python-backend` folder. You will need to install the `python-dotenv` package to load the environment variables from the `.env` file. And then, add these lines of code to your app:
+Alternatively, you can set the `OPENAI_API_KEY` environment variable in an `.env` file at the root of the `app` folder. You will need to install the `python-dotenv` package to load the environment variables from the `.env` file. And then, add these lines of code to your app:
 
 ```bash
 from dotenv import load_dotenv
@@ -36,47 +32,24 @@ load_dotenv()
 
 ### Install dependencies
 
-Install the dependencies for the backend by running the following commands:
+Install the dependencies by running:
 
 ```bash
-cd python-backend
+cd app
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-For the UI, you can run:
-
-```bash
-cd ui
-npm install
-```
-
 ### Run the app
 
-You can either run the backend independently if you want to use a separate UI, or run both the UI and backend at the same time.
-
-#### Run the backend independently
-
-From the `python-backend` folder, run:
+From the `app` folder, run:
 
 ```bash
-FLASK_APP=main:app flask run --host 0.0.0.0 --port 8000 --debug
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The backend will be available at: [http://localhost:8000](http://localhost:8000)
-
-#### Run the UI & backend simultaneously
-
-From the `ui` folder, run:
-
-```bash
-npm run dev
-```
-
-The frontend will be available at: [http://localhost:3000](http://localhost:3000)
-
-This command will also start the backend.
+The UI and backend will both be available at: [http://localhost:8000](http://localhost:8000)
 
 ## Customization
 
