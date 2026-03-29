@@ -1,0 +1,6 @@
+openai-agents
+openai-chatkit
+pydantic
+fastapi
+uvicorn
+python-dotenv
