@@ -59,6 +59,8 @@
     context: {},
     threadId: null,
     initialThreadId: null,
+    lastResponseEndAt: 0,
+    runActive: false,
     selectedSeat: null,
     handledSeatMapEventIds: new Set(),
   };
@@ -201,7 +203,8 @@
       return "null";
     }
     if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-      return String(value);
+      const rendered = String(value);
+      return rendered.length > 64 ? `${rendered.slice(0, 61)}...` : rendered;
     }
     if (Array.isArray(value)) {
       if (value.length === 0) {
@@ -209,7 +212,8 @@
       }
       const primitives = value.every((item) => ["string", "number", "boolean"].includes(typeof item));
       if (primitives && value.length <= 3) {
-        return value.join(", ");
+        const joined = value.join(", ");
+        return joined.length > 64 ? `${value.length} items` : joined;
       }
       return `${value.length} item${value.length === 1 ? "" : "s"}`;
     }
@@ -292,6 +296,40 @@
       }
     }
     return groups;
+  }
+
+  function latestRunnerAgentInfo() {
+    const runnerEvents = state.events.filter(
+      (event) => event.type !== "message" && event.type !== "progress_update"
+    );
+    if (!runnerEvents.length) {
+      return { agentName: "", isLive: false, timestampMs: 0 };
+    }
+
+    const latestEvent = runnerEvents[runnerEvents.length - 1];
+    const latestTs =
+      latestEvent.timestamp instanceof Date
+        ? latestEvent.timestamp.getTime()
+        : parseTimestamp(latestEvent.timestamp).getTime();
+
+    return {
+      agentName: latestEvent.agent || "",
+      isLive: Date.now() - latestTs <= 12000,
+      timestampMs: latestTs,
+    };
+  }
+
+  function displayedAgentName() {
+    const latest = latestRunnerAgentInfo();
+    if (
+      state.runActive &&
+      latest.isLive &&
+      latest.agentName &&
+      latest.timestampMs > state.lastResponseEndAt
+    ) {
+      return latest.agentName;
+    }
+    return "";
   }
 
   function getSeatStatus(seatNumber) {
@@ -425,7 +463,8 @@
   }
 
   function renderAgents() {
-    const activeAgent = state.agents.find((agent) => agent.name === state.currentAgent);
+    const activeAgentName = displayedAgentName();
+    const activeAgent = state.agents.find((agent) => agent.name === activeAgentName);
     if (!state.agents.length) {
       dom.agentsList.innerHTML = '<div class="empty">No agents loaded yet</div>';
       return;
@@ -433,9 +472,12 @@
 
     const html = state.agents
       .map((agent) => {
-        const isActive = agent.name === state.currentAgent;
-        const canHandoff = Array.isArray(activeAgent?.handoffs) && activeAgent.handoffs.includes(agent.name);
-        const isDimmed = !isActive && !canHandoff;
+        const isActive = agent.name === activeAgentName;
+        const canHandoff =
+          isActive ||
+          (Array.isArray(activeAgent?.handoffs) && activeAgent.handoffs.includes(agent.name));
+        const shouldDim = Boolean(activeAgentName);
+        const isDimmed = shouldDim && !canHandoff;
 
         return `
           <article class="card ${isActive ? "is-active" : ""} ${isDimmed ? "is-dimmed" : ""}">
@@ -476,7 +518,8 @@
   }
 
   function renderGuardrails() {
-    const activeAgent = state.agents.find((agent) => agent.name === state.currentAgent);
+    const activeAgentName = displayedAgentName() || state.currentAgent;
+    const activeAgent = state.agents.find((agent) => agent.name === activeAgentName);
     const inputGuardrails = Array.isArray(activeAgent?.input_guardrails) ? activeAgent.input_guardrails : [];
 
     if (!inputGuardrails.length) {
@@ -625,6 +668,10 @@
           timestamp: parseTimestamp(event.timestamp),
         }))
       );
+      const latest = latestRunnerAgentInfo();
+      if (latest.timestampMs > state.lastResponseEndAt) {
+        state.runActive = true;
+      }
       maybeShowSeatMapFromEvents(state.events);
     }
 
@@ -750,6 +797,7 @@
     }
 
     if (name === "runner_state_update" || name === "runner_event_delta") {
+      state.runActive = true;
       if (state.threadId) {
         void hydrateState(state.threadId);
       }
@@ -789,6 +837,10 @@
     });
 
     chatkitElement.addEventListener("chatkit.response.end", () => {
+      state.lastResponseEndAt = Date.now();
+      state.runActive = false;
+      renderAgents();
+      renderGuardrails();
       if (state.threadId) {
         void hydrateState(state.threadId);
       }

@@ -68,20 +68,16 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 chat_server = AirlineServer()
 
-
 def get_server() -> AirlineServer:
     return chat_server
-
 
 @app.get("/")
 async def serve_root() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
-
 @app.get("/openai_logo.svg")
 async def serve_logo() -> FileResponse:
     return FileResponse(STATIC_DIR / "openai_logo.svg")
-
 
 @app.post("/chatkit")
 async def chatkit_endpoint(
