@@ -812,7 +812,8 @@
 
     try {
       await waitForElementDefinition("openai-chatkit", 10000);
-    } catch (error) {
+    } 
+    catch (error) {
       console.error("ChatKit custom element failed to define", error);
       setStatus("ChatKit failed to initialize");
       return;
@@ -826,7 +827,8 @@
       }
       if (state.threadId) {
         setStatus(`Thread ${state.threadId} - chat ready`);
-      } else {
+      } 
+      else {
         setStatus("Chat ready - start a conversation");
       }
     });
