@@ -25,7 +25,6 @@ from agents.exceptions import MaxTurnsExceeded
 from chatkit.agents import stream_agent_response
 from chatkit.server import ChatKitServer
 from chatkit.types import (
-    Action,
     AssistantMessageContent,
     AssistantMessageItem,
     ClientEffectEvent,
@@ -38,7 +37,9 @@ from chatkit.types import (
 )
 from chatkit.store import NotFoundError
 
-from airline.context import AirlineAgentChatContext, AirlineAgentContext, create_initial_context, public_context
+from airline.context import (
+    AirlineAgentChatContext, AirlineAgentContext, create_initial_context, public_context
+)
 from airline.agents import (
     booking_cancellation_agent,
     faq_agent,
@@ -161,9 +162,7 @@ class AirlineServer(ChatKitServer[dict[str, Any]]):
             self._state[thread_id] = ConversationState()
         return self._state[thread_id]
 
-    async def _ensure_thread(
-        self, thread_id: Optional[str], context: dict[str, Any]
-    ) -> ThreadMetadata:
+    async def _ensure_thread(self, thread_id: Optional[str], context: dict[str, Any]) -> ThreadMetadata:
         if thread_id:
             try:
                 return await self.store.load_thread(thread_id, context)
@@ -178,12 +177,7 @@ class AirlineServer(ChatKitServer[dict[str, Any]]):
         """Public wrapper to ensure a thread exists."""
         return await self._ensure_thread(thread_id, context)
 
-    def _record_guardrails(
-        self,
-        agent_name: str,
-        input_text: str,
-        guardrail_results: List[Any],
-    ) -> List[GuardrailCheck]:
+    def _record_guardrails(self, agent_name: str, input_text: str, guardrail_results: List[Any],) -> List[GuardrailCheck]:
         checks: List[GuardrailCheck] = []
         timestamp = time.time() * 1000
         agent = _get_agent_by_name(agent_name)
@@ -225,12 +219,7 @@ class AirlineServer(ChatKitServer[dict[str, Any]]):
             except asyncio.QueueFull:
                 pass
 
-    def _record_events(
-        self,
-        run_items: List[Any],
-        current_agent_name: str,
-        thread_id: str,
-    ) -> (List[AgentEvent], str):
+    def _record_events(self, run_items: List[Any], current_agent_name: str, thread_id: str,) -> (List[AgentEvent], str):
         events: List[AgentEvent] = []
         active_agent = current_agent_name
         for item in run_items:
@@ -313,12 +302,7 @@ class AirlineServer(ChatKitServer[dict[str, Any]]):
 
         return events, active_agent
 
-    async def respond(
-        self,
-        thread: ThreadMetadata,
-        input_user_message: UserMessageItem | None,
-        context: dict[str, Any],
-    ) -> AsyncIterator[ThreadStreamEvent]:
+    async def respond(self, thread: ThreadMetadata, input_user_message: UserMessageItem | None, context: dict[str, Any],) -> AsyncIterator[ThreadStreamEvent]:
         state = self._state_for_thread(thread.id)
         user_text = ""
         if input_user_message is not None:
@@ -469,13 +453,7 @@ class AirlineServer(ChatKitServer[dict[str, Any]]):
                 },
             )
 
-    async def action(
-        self,
-        thread: ThreadMetadata,
-        action: Action[str, Any],
-        sender: WidgetItem | None,
-        context: dict[str, Any],
-    ) -> AsyncIterator[ThreadStreamEvent]:
+    async def action(self, thread: ThreadMetadata, action: Action[str, Any], sender: WidgetItem | None, context: dict[str, Any],) -> AsyncIterator[ThreadStreamEvent]:
         # No client-handled actions in this demo.
         if False:
             yield
@@ -492,7 +470,8 @@ class AirlineServer(ChatKitServer[dict[str, Any]]):
             "guardrails": [g.model_dump() for g in state.guardrails],
         }
 
-    # -- Streaming state updates to UI listeners ---------------------------------
+
+    # ------------------------- Streaming state updates to UI listeners -------------------------
     def _register_listener(self, thread_id: str) -> asyncio.Queue:
         q: asyncio.Queue = asyncio.Queue()
         self._listeners.setdefault(thread_id, []).append(q)
@@ -506,7 +485,9 @@ class AirlineServer(ChatKitServer[dict[str, Any]]):
         return q
 
     def register_listener(self, thread_id: str) -> asyncio.Queue:
-        """Public wrapper for listener registration."""
+        """
+        Public wrapper for listener registration.
+        """
         return self._register_listener(thread_id)
 
     def _unregister_listener(self, thread_id: str, queue: asyncio.Queue) -> None:
@@ -517,7 +498,9 @@ class AirlineServer(ChatKitServer[dict[str, Any]]):
             self._listeners.pop(thread_id, None)
 
     def unregister_listener(self, thread_id: str, queue: asyncio.Queue) -> None:
-        """Public wrapper for listener cleanup."""
+        """
+        Public wrapper for listener cleanup.
+        """
         self._unregister_listener(thread_id, queue)
 
     async def _broadcast_state(self, thread: ThreadMetadata, context: dict[str, Any]) -> None:
