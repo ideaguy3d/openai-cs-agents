@@ -47,16 +47,6 @@ def seat_services_instructions(
     )
 
 
-seat_special_services_agent = Agent[AirlineAgentChatContext](
-    name="Seat and Special Services Agent",
-    model=MODEL,
-    handoff_description="Updates seats and handles medical or special service seating.",
-    instructions=seat_services_instructions,
-    tools=[update_seat, assign_special_service_seat, display_seat_map],
-    input_guardrails=[relevance_guardrail, jailbreak_guardrail],
-)
-
-
 def flight_information_instructions(
     run_context: RunContextWrapper[AirlineAgentChatContext], 
     agent: Agent[AirlineAgentChatContext]
@@ -74,16 +64,6 @@ def flight_information_instructions(
         "Work autonomously: chain multiple tool calls, then emit a single handoff (one per message) without pausing for user input when data is present."
         "If the customer asks about other topics (baggage, refunds, etc.), transfer to the relevant agent with a single handoff."
     )
-
-
-flight_information_agent = Agent[AirlineAgentChatContext](
-    name="Flight Information Agent",
-    model=MODEL,
-    handoff_description="Provides flight status, connection impact, and alternate options.",
-    instructions=flight_information_instructions,
-    tools=[flight_status_tool, get_matching_flights],
-    input_guardrails=[relevance_guardrail, jailbreak_guardrail],
-)
 
 
 def booking_cancellation_instructions(
@@ -105,16 +85,6 @@ def booking_cancellation_instructions(
     )
 
 
-booking_cancellation_agent = Agent[AirlineAgentChatContext](
-    name="Booking and Cancellation Agent",
-    model=MODEL,
-    handoff_description="Handles new bookings, rebookings after delays, and cancellations.",
-    instructions=booking_cancellation_instructions,
-    tools=[cancel_flight, get_matching_flights, book_new_flight],
-    input_guardrails=[relevance_guardrail, jailbreak_guardrail],
-)
-
-
 def refunds_compensation_instructions(
     run_context: RunContextWrapper[AirlineAgentChatContext], 
     agent: Agent[AirlineAgentChatContext]
@@ -131,6 +101,58 @@ def refunds_compensation_instructions(
         "3. Confirm what was issued and what receipts to keep. If they need baggage help, hand off to the Baggage Agent; otherwise return to Triage when done.\n"
         "Operate autonomously: chain multiple tool calls in your turn without waiting for user input when sufficient data exists. Only emit one handoff per message (usually to FAQ for policy if not consulted yet, then Baggage if needed, else Triage)."
     )
+
+
+async def on_seat_booking_handoff(context: RunContextWrapper[AirlineAgentChatContext]) -> None:
+    """Ensure context is hydrated when handing off to the seat and special services agent."""
+    apply_itinerary_defaults(context.context.state)
+    if context.context.state.flight_number is None:
+        context.context.state.flight_number = f"FLT-{random.randint(100, 999)}"
+    if context.context.state.confirmation_number is None:
+        context.context.state.confirmation_number = "".join(
+            random.choices(string.ascii_uppercase + string.digits, k=6)
+        )
+
+
+async def on_booking_handoff(context: RunContextWrapper[AirlineAgentChatContext]) -> None:
+    """Prepare context when handing off to booking and cancellation."""
+    apply_itinerary_defaults(context.context.state)
+    if context.context.state.confirmation_number is None:
+        context.context.state.confirmation_number = "".join(
+            random.choices(string.ascii_uppercase + string.digits, k=6)
+        )
+    if context.context.state.flight_number is None:
+        context.context.state.flight_number = f"FLT-{random.randint(100, 999)}"
+
+
+seat_special_services_agent = Agent[AirlineAgentChatContext](
+    name="Seat and Special Services Agent",
+    model=MODEL,
+    handoff_description="Updates seats and handles medical or special service seating.",
+    instructions=seat_services_instructions,
+    tools=[update_seat, assign_special_service_seat, display_seat_map],
+    input_guardrails=[relevance_guardrail, jailbreak_guardrail],
+)
+
+
+flight_information_agent = Agent[AirlineAgentChatContext](
+    name="Flight Information Agent",
+    model=MODEL,
+    handoff_description="Provides flight status, connection impact, and alternate options.",
+    instructions=flight_information_instructions,
+    tools=[flight_status_tool, get_matching_flights],
+    input_guardrails=[relevance_guardrail, jailbreak_guardrail],
+)
+
+
+booking_cancellation_agent = Agent[AirlineAgentChatContext](
+    name="Booking and Cancellation Agent",
+    model=MODEL,
+    handoff_description="Handles new bookings, rebookings after delays, and cancellations.",
+    instructions=booking_cancellation_instructions,
+    tools=[cancel_flight, get_matching_flights, book_new_flight],
+    input_guardrails=[relevance_guardrail, jailbreak_guardrail],
+)
 
 
 refunds_compensation_agent = Agent[AirlineAgentChatContext](
@@ -177,29 +199,10 @@ triage_agent = Agent[AirlineAgentChatContext](
 )
 
 
-async def on_seat_booking_handoff(context: RunContextWrapper[AirlineAgentChatContext]) -> None:
-    """Ensure context is hydrated when handing off to the seat and special services agent."""
-    apply_itinerary_defaults(context.context.state)
-    if context.context.state.flight_number is None:
-        context.context.state.flight_number = f"FLT-{random.randint(100, 999)}"
-    if context.context.state.confirmation_number is None:
-        context.context.state.confirmation_number = "".join(
-            random.choices(string.ascii_uppercase + string.digits, k=6)
-        )
-
-
-async def on_booking_handoff(context: RunContextWrapper[AirlineAgentChatContext]) -> None:
-    """Prepare context when handing off to booking and cancellation."""
-    apply_itinerary_defaults(context.context.state)
-    if context.context.state.confirmation_number is None:
-        context.context.state.confirmation_number = "".join(
-            random.choices(string.ascii_uppercase + string.digits, k=6)
-        )
-    if context.context.state.flight_number is None:
-        context.context.state.flight_number = f"FLT-{random.randint(100, 999)}"
-
-
-# Set up handoff relationships
+# // 5-24-2026
+# ----------------------------------------------
+# -------- Set up handoff relationships --------
+# ----------------------------------------------
 triage_agent.handoffs = [
     flight_information_agent,
     handoff(agent=booking_cancellation_agent, on_handoff=on_booking_handoff),
@@ -207,19 +210,20 @@ triage_agent.handoffs = [
     faq_agent,
     refunds_compensation_agent,
 ]
+
 faq_agent.handoffs.append(triage_agent)
+
 seat_special_services_agent.handoffs.extend([refunds_compensation_agent, triage_agent])
-flight_information_agent.handoffs.extend(
-    [
-        handoff(agent=booking_cancellation_agent, on_handoff=on_booking_handoff),
-        triage_agent,
-    ]
-)
-booking_cancellation_agent.handoffs.extend(
-    [
-        handoff(agent=seat_special_services_agent, on_handoff=on_seat_booking_handoff),
-        refunds_compensation_agent,
-        triage_agent,
-    ]
-)
+
+flight_information_agent.handoffs.extend([
+    handoff(agent=booking_cancellation_agent, on_handoff=on_booking_handoff),
+    triage_agent,
+])
+
+booking_cancellation_agent.handoffs.extend([
+    handoff(agent=seat_special_services_agent, on_handoff=on_seat_booking_handoff),
+    refunds_compensation_agent,
+    triage_agent,
+])
+
 refunds_compensation_agent.handoffs.extend([faq_agent, triage_agent])
