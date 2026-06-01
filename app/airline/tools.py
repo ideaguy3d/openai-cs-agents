@@ -12,7 +12,8 @@ from .demo_data import active_itinerary, apply_itinerary_defaults, get_itinerary
 
 
 @function_tool(
-    name_override="faq_lookup_tool", description_override="Lookup frequently asked questions."
+    name_override="faq_lookup_tool", 
+    description_override="Lookup frequently asked questions."
 )
 async def faq_lookup_tool(question: str) -> str:
     """Lookup answers to frequently asked questions."""
@@ -170,7 +171,9 @@ async def get_matching_flights(
     origin: str | None = None,
     destination: str | None = None,
 ) -> str:
-    """Return mock matching flights for a disrupted itinerary."""
+    """
+    Return mock matching flights for a disrupted itinerary.
+    """
     await context.context.stream(ProgressUpdateEvent(text="Scanning for matching flights..."))
     ctx_state = context.context.state
     scenario_key, itinerary = active_itinerary(ctx_state)
