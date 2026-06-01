@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from chatkit.server import StreamingResult
+
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
@@ -27,8 +28,8 @@ from airline.context import (
     public_context,
 )
 from server import AirlineServer
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
